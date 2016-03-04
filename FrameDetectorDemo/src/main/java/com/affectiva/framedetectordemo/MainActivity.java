@@ -47,6 +47,7 @@ public class MainActivity extends Activity implements CameraView.OnCameraViewEve
     long lastSDKFPSResetTime = -1L;
 
     //floats to ensure the timestamps we send to FrameDetector are sequentially increasing
+    long startCameraTime = -1;
     float lastTimestamp = -1f;
     final float epsilon = .01f;
 
@@ -134,6 +135,7 @@ public class MainActivity extends Activity implements CameraView.OnCameraViewEve
         }
         cameraView.startCamera(isCameraFront ? CameraHelper.CameraType.CAMERA_FRONT : CameraHelper.CameraType.CAMERA_BACK);
         isCameraStarted = true;
+        startCameraTime = SystemClock.elapsedRealtime();
         asyncDetector.reset();
     }
 
@@ -269,10 +271,16 @@ public class MainActivity extends Activity implements CameraView.OnCameraViewEve
         numberCameraFramesReceived += 1;
         cameraFPS.setText(String.format("CAM: %.3f", 1000f * (float) numberCameraFramesReceived / (SystemClock.elapsedRealtime() - lastCameraFPSResetTime)));
 
-        float timeStamp = (float)SystemClock.elapsedRealtime()/1000f;
-        if (timeStamp > (lastTimestamp + epsilon)) {
+        float timeStamp = (float)( SystemClock.elapsedRealtime() - startCameraTime )/1000f;
+
+        if (timeStamp > (float)(lastTimestamp + epsilon)) {
+            Log.i(LOG_TAG, "Sending frame " + String.format("%.3f", timeStamp) + " for processing" );
             lastTimestamp = timeStamp;
             asyncDetector.process(createFrameFromData(frame,width,height,rotation),timeStamp);
+        }
+        else
+        {
+            Log.w(LOG_TAG, "Non-increasing timestamp received from camera: " + String.format("%.3f", timeStamp) );
         }
     }
 
